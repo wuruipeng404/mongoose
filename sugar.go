@@ -7,9 +7,11 @@
 package mongoose
 
 import (
+	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
+	"unsafe"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -27,15 +29,120 @@ func ToSnakeCase(str string) string {
 	return strings.ToLower(snake)
 }
 
-// ConvertFilter 检查filter并进行转化. 转化为driver 支持的格式
+// ParseFilter 检查filter并进行转化. 转化为 driver 支持的格式
 // 如果本身就是 bson.M 或 bson.D 系列则不进行转化
 // 如果是结构体或者结构体指针则进行转化 (支持复杂结构体)
-func ConvertFilter(filter interface{}) interface{} {
+func ParseFilter(filter interface{}) interface{} {
 	var (
 		finallyF bson.M
+		refType  = reflect.TypeOf(filter).String()
 	)
-	// todo:.......
+
+	if refType == "primitive.M" || refType == "primitive.D" {
+		return filter
+	}
+	finallyF = ConvertFilter(filter, "")
 	return finallyF
+}
+
+// ConvertFilter convert Struct or Ptr to bson.M
+func ConvertFilter(v interface{}, fatherTag string) bson.M {
+	var (
+		result   = bson.M{}
+		rv       = reflect.ValueOf(v)
+		rt       = reflect.TypeOf(v)
+		iterRv   reflect.Value
+		numField int
+	)
+	fmt.Println("value  ", rv)
+	fmt.Println("type  ", rt)
+
+	if rv.IsZero() {
+		return result
+	}
+
+	// 获取 field 数量
+	if rv.Kind() == reflect.Ptr {
+		numField = rv.Elem().NumField()
+		iterRv = rv.Elem()
+	} else {
+		numField = rv.NumField()
+		iterRv = reflect.New(rv.Type()).Elem()
+		iterRv.Set(rv)
+	}
+
+	for i := 0; i < numField; i++ {
+		var (
+			nextFatherTag  string
+			currentBsonTag string
+			bsonTag        string
+			currentValue   reflect.Value
+			currentField   reflect.StructField
+			ignoreZero     = true
+		)
+
+		if rv.Kind() == reflect.Ptr {
+			currentField = rt.Elem().Field(i)
+		} else {
+			currentField = rt.Field(i)
+		}
+
+		tmp := iterRv.Field(i)
+		currentValue = reflect.NewAt(tmp.Type(), unsafe.Pointer(tmp.UnsafeAddr())).Elem()
+		bsonTag = currentField.Tag.Get("bson")
+
+		// 获取 下一级处理的tag名称
+		if bsonTag == "" {
+			currentBsonTag = currentField.Name
+		} else if bsonTag == "-" {
+			continue
+		} else if strings.Contains(bsonTag, "inline") {
+			currentBsonTag = ""
+		} else {
+			if strings.Contains(bsonTag, ",") {
+				currentBsonTag = strings.Split(bsonTag, ",")[0]
+			} else {
+				currentBsonTag = bsonTag
+			}
+		}
+
+		if fatherTag == "" {
+			nextFatherTag = currentBsonTag
+		} else {
+			nextFatherTag = fatherTag + "." + currentBsonTag
+		}
+
+		if !strings.Contains(bsonTag, "omitempty") {
+			ignoreZero = false
+		}
+
+		// 有子结构的继续进行 字段遍历
+		if (currentValue.Kind() == reflect.Ptr || currentValue.Kind() == reflect.Struct) &&
+			(currentValue.Type().String() != "time.Time" && currentValue.Type().String() != "*time.Time") {
+			// 递归处理
+			for nk, nv := range ConvertFilter(currentValue.Interface(), nextFatherTag) {
+				result[nk] = nv
+			}
+			// 没有子结构的则进行取值
+		} else {
+			if currentValue.IsZero() && ignoreZero {
+				continue
+			}
+
+			var key string
+
+			if fatherTag == "" {
+				key = currentBsonTag
+			} else {
+				key = fatherTag + "." + currentBsonTag
+			}
+			// fmt.Println(key)
+			// fmt.Println(currentValue)
+			result[key] = currentValue.Interface()
+			// fmt.Println("================")
+		}
+	}
+	return result
 }
 
 // SimpleStructToDoc 没有嵌套的结构体可以使用此方法进行转化
@@ -129,8 +236,12 @@ func Nin(field string, value interface{}) bson.M {
 	return bson.M{field: bson.M{"$nin": value}}
 }
 
+func Set(doc interface{}) bson.M {
+	return bson.M{"$set": doc}
+}
+
 // get collection by struct
-// func (m *Mongoose) coll(sc interface{}) *mongo.Collection {
+// func (m *Mongo) coll(sc interface{}) *mongo.Collection {
 // 	var (
 // 		name string
 // 		rt   = reflect.TypeOf(sc)
@@ -152,3 +263,49 @@ func Nin(field string, value interface{}) bson.M {
 // 	name = toSnakeCase(name)
 // 	return m.db.Collection(name)
 // }
+
+func getElemType(a interface{}) reflect.Type {
+	for t := reflect.TypeOf(a); ; {
+		switch t.Kind() {
+		case reflect.Ptr, reflect.Slice:
+			t = t.Elem()
+		default:
+			return t
+		}
+	}
+}
+
+func getCollNameForFind(findRes interface{}) (string, error) {
+	if n := reflect.New(getElemType(findRes)).MethodByName("CollectionName"); n.IsValid() {
+		name := n.Call(nil)[0].Interface().(string)
+		if name == "" {
+			return "", CollectionNameNotFound
+		}
+		return name, nil
+	} else {
+		return "", InvalidDocument
+	}
+}
+
+func getCollName(filter, opt interface{}) (string, error) {
+	var (
+		ok  bool
+		doc IDocument
+	)
+
+	if doc, ok = filter.(IDocument); ok {
+		return doc.CollectionName(), nil
+	}
+
+	ref := reflect.ValueOf(opt)
+
+	if !ref.IsValid() {
+		return "", CollectionNameNotFound
+	}
+
+	if fn := ref.Elem().FieldByName("CollectionName"); fn.IsZero() {
+		return "", CollectionNameNotFound
+	} else {
+		return fn.String(), nil
+	}
+}

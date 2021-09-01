@@ -10,7 +10,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type DeleteOption struct {
-	CollectionName string
-	DriverOptions  []*options.DeleteOptions
-}
+type (
+	DeleteOption struct {
+		CollectionName string
+		DriverOptions  []*options.DeleteOptions
+	}
+)

@@ -12,4 +12,5 @@ import (
 
 var (
 	CollectionNameNotFound = errors.New("when filter is not IDocument, then need CollectionName option")
+	InvalidDocument        = errors.New("invalid document impl IDocument interface at least")
 )
