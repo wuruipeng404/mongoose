@@ -7,9 +7,7 @@
 package mongoose
 
 import (
-	"fmt"
 	"reflect"
-	"regexp"
 	"strings"
 	"unsafe"
 
@@ -18,16 +16,16 @@ import (
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 )
 
-var (
-	matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
-	matchAllCap   = regexp.MustCompile("([a-z0-9])([A-Z])")
-)
-
-func ToSnakeCase(str string) string {
-	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
-	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
-	return strings.ToLower(snake)
-}
+// var (
+// 	matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+// 	matchAllCap   = regexp.MustCompile("([a-z0-9])([A-Z])")
+// )
+//
+// func ToSnakeCase(str string) string {
+// 	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
+// 	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+// 	return strings.ToLower(snake)
+// }
 
 // ParseFilter 检查filter并进行转化. 转化为 driver 支持的格式
 // 如果本身就是 bson.M 或 bson.D 系列则不进行转化
@@ -54,8 +52,8 @@ func ConvertFilter(v interface{}, fatherTag string) bson.M {
 		iterRv   reflect.Value
 		numField int
 	)
-	fmt.Println("value  ", rv)
-	fmt.Println("type  ", rt)
+	// fmt.Println("value  ", rv)
+	// fmt.Println("type  ", rt)
 
 	if rv.IsZero() {
 		return result

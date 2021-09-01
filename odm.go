@@ -21,7 +21,7 @@ type Mongo struct {
 	db     *mongo.Database
 }
 
-type MOptions struct {
+type Options struct {
 	User     string
 	Password string
 	Host     string
@@ -30,13 +30,16 @@ type MOptions struct {
 
 	ConnectTimeout         time.Duration
 	ServerSelectionTimeout time.Duration
+
+	DriverOpts []*options.ClientOptions
 }
 
-func Open(opt *MOptions) (*Mongo, error) {
+func Open(opt *Options) (*Mongo, error) {
 	var (
-		err    error
-		dsn    string
-		client *mongo.Client
+		err      error
+		dsn      string
+		client   *mongo.Client
+		connOpts []*options.ClientOptions
 	)
 
 	if opt.User == "" || opt.Password == "" {
@@ -53,10 +56,16 @@ func Open(opt *MOptions) (*Mongo, error) {
 		opt.ServerSelectionTimeout = 10 * time.Second
 	}
 
+	connOpts = append(connOpts, options.Client().ApplyURI(dsn).SetConnectTimeout(opt.ConnectTimeout))
+	connOpts = append(connOpts, options.Client().SetServerSelectionTimeout(opt.ServerSelectionTimeout))
+
+	if len(opt.DriverOpts) > 0 {
+		connOpts = append(connOpts, opt.DriverOpts...)
+	}
+
 	if client, err = mongo.Connect(
 		context.Background(),
-		options.Client().ApplyURI(dsn).SetConnectTimeout(opt.ConnectTimeout),
-		options.Client().SetServerSelectionTimeout(opt.ServerSelectionTimeout),
+		connOpts...,
 	); err != nil {
 		return nil, err
 	}
