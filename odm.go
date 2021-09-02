@@ -76,6 +76,10 @@ func Open(opt *Options) (*Mongo, error) {
 	}, nil
 }
 
+func (m *Mongo) Release(ctx context.Context) error {
+	return m.client.Disconnect(ctx)
+}
+
 // GetCollectionWithName 提供原始查询方法
 func (m *Mongo) GetCollectionWithName(name string, opts ...*options.CollectionOptions) *mongo.Collection {
 	return m.db.Collection(name, opts...)
