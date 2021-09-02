@@ -52,8 +52,6 @@ func ConvertFilter(v interface{}, fatherTag string) bson.M {
 		iterRv   reflect.Value
 		numField int
 	)
-	// fmt.Println("value  ", rv)
-	// fmt.Println("type  ", rt)
 
 	if rv.IsZero() {
 		return result
@@ -83,6 +81,11 @@ func ConvertFilter(v interface{}, fatherTag string) bson.M {
 			currentField = rt.Elem().Field(i)
 		} else {
 			currentField = rt.Field(i)
+		}
+
+		// no support interface field
+		if currentField.Type.Kind() == reflect.Interface {
+			continue
 		}
 
 		tmp := iterRv.Field(i)
@@ -134,10 +137,7 @@ func ConvertFilter(v interface{}, fatherTag string) bson.M {
 			} else {
 				key = fatherTag + "." + currentBsonTag
 			}
-			// fmt.Println(key)
-			// fmt.Println(currentValue)
 			result[key] = currentValue.Interface()
-			// fmt.Println("================")
 		}
 	}
 	return result
