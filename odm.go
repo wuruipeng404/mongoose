@@ -80,8 +80,8 @@ func (m *Mongo) Release(ctx context.Context) error {
 	return m.client.Disconnect(ctx)
 }
 
-// GetCollectionWithName 提供原始查询方法
-func (m *Mongo) GetCollectionWithName(name string, opts ...*options.CollectionOptions) *mongo.Collection {
+// DriverCollection 提供原始查询方法
+func (m *Mongo) DriverCollection(name string, opts ...*options.CollectionOptions) *mongo.Collection {
 	return m.db.Collection(name, opts...)
 }
 

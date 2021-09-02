@@ -6,6 +6,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"github.com/wuruipeng404/mongoose"
 	"go.mongodb.org/mongo-driver/bson"
@@ -62,10 +63,10 @@ func Create() {
 	})
 
 	// if your want to use driver method
-	odm.GetCollectionWithName("your collection").InsertOne(bson.M{})
+	odm.DriverCollection("your collection").InsertOne(bson.M{})
 }
 
-func HaveFilter() {
+func HaveFilterMethod() {
 	// update find delete
 	// id support string (primitive.ObjectID.hex()) and ObjectID
 	var result YourSchema
@@ -76,14 +77,14 @@ func HaveFilter() {
 	var result2 []YourSchema
 	odm.Find(YourSchema{FieldA: "zhangsan"}, &result2)
 	odm.Find(bson.M{"field_a": "zhangsan"}, &result2)
-	// this.is sugar
+	// this is sugar
 	odm.Find(mongoose.Eq("field_a", "zhangsan"), &result2)
 }
 
 // Special the delete method have a little bit different
 func Special() {
 
-	// when your filter is bson or not a IDocument
+	// when your filter is bson, not a IDocument
 	// you need add option CollectionName
 
 	option := mongoose.DeleteOption{
@@ -92,5 +93,12 @@ func Special() {
 	}
 	odm.Delete(mongoose.Eq("field_a", "aaa"), option)
 }
+
+// release client
+
+func Close() {
+	odm.Release(context.TODO())
+}
+
 
 ```
