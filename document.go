@@ -27,17 +27,30 @@ type Document struct {
 }
 
 func (d *Document) PreCreate() {
-	d.ID = primitive.NewObjectID()
-	d.CreatedAt = Now()
-	d.UpdatedAt = Now()
+	if d.ID == primitive.NilObjectID {
+		d.ID = primitive.NewObjectID()
+	}
+
+	if d.CreatedAt == nil {
+		d.CreatedAt = Now()
+	}
+
+	if d.UpdatedAt == nil {
+		d.UpdatedAt = Now()
+	}
+
 }
 
 func (d *Document) PreUpdate() {
-	d.UpdatedAt = Now()
+	if d.UpdatedAt == nil {
+		d.UpdatedAt = Now()
+	}
 }
 
 func (d *Document) PreDelete() {
-	d.DeletedAt = Now()
+	if d.DeletedAt == nil {
+		d.DeletedAt = Now()
+	}
 }
 
 func Now() *time.Time {
