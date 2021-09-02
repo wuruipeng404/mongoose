@@ -111,7 +111,7 @@ func (m *Mongo) DeleteOne(filter interface{}, opt *DeleteOption) (*mongo.DeleteR
 		name string
 	)
 
-	if name, err = getCollName(filter, opt); err != nil {
+	if name, err = getCollNameForOpt(filter, opt); err != nil {
 		return nil, err
 	}
 
@@ -124,7 +124,7 @@ func (m *Mongo) DeleteMany(filter interface{}, opt *DeleteOption) (*mongo.Delete
 		err  error
 		name string
 	)
-	if name, err = getCollName(filter, opt); err != nil {
+	if name, err = getCollNameForOpt(filter, opt); err != nil {
 		return nil, err
 	}
 
@@ -160,7 +160,7 @@ func (m *Mongo) UpdateMany(filter interface{}, update IDocument, opts ...*option
 // FindOne 查找一条数据
 // filter 支持 bson 以及 IDocument
 // result 则是一个 存储结果的指针 例如 &SomeDoc
-func (m *Mongo) FindOne(filter interface{}, result interface{}, opts ...*options.FindOneOptions) (err error) {
+func (m *Mongo) FindOne(filter, result interface{}, opts ...*options.FindOneOptions) (err error) {
 	var name string
 
 	if name, err = getCollNameForFind(result); err != nil {
@@ -169,8 +169,35 @@ func (m *Mongo) FindOne(filter interface{}, result interface{}, opts ...*options
 	return m.db.Collection(name).FindOne(context.TODO(), ParseFilter(filter), opts...).Decode(result)
 }
 
+func (m *Mongo) FindOneAndReplace(filter interface{}, replacement IDocument,
+	opts ...*options.FindOneAndReplaceOptions) *mongo.SingleResult {
+	return m.db.Collection(replacement.CollectionName()).FindOneAndReplace(context.TODO(), filter, replacement, opts...)
+}
+
+func (m *Mongo) FindOneAndDelete(filter interface{}, opt *FindOneDeleteOption) (result *mongo.SingleResult, err error) {
+	var (
+		name string
+	)
+
+	if name, err = getCollNameForOpt(filter, opt); err != nil {
+		return nil, err
+	}
+
+	result = m.db.Collection(name).FindOneAndDelete(context.TODO(), ParseFilter(filter), opt.DriverOptions...)
+	return
+}
+
+func (m *Mongo) FindOneAndUpdate(filter interface{}, update IDocument,
+	opts ...*options.FindOneAndUpdateOptions) *mongo.SingleResult {
+	return m.db.Collection(update.CollectionName()).FindOneAndUpdate(
+		context.TODO(),
+		ParseFilter(filter),
+		Set(update),
+		opts...)
+}
+
 // FindByID 通过id查找数据
-func (m *Mongo) FindByID(id interface{}, result interface{}, opts ...*options.FindOneOptions) (err error) {
+func (m *Mongo) FindByID(id, result interface{}, opts ...*options.FindOneOptions) (err error) {
 	var oid primitive.ObjectID
 
 	if oid, err = ConvertId(id); err != nil {
@@ -181,7 +208,7 @@ func (m *Mongo) FindByID(id interface{}, result interface{}, opts ...*options.Fi
 }
 
 // FindUnDeleteByID 查找一条未删除的数据
-func (m *Mongo) FindUnDeleteByID(id interface{}, result interface{}, opts ...*options.FindOneOptions) (err error) {
+func (m *Mongo) FindUnDeleteByID(id, result interface{}, opts ...*options.FindOneOptions) (err error) {
 	var oid primitive.ObjectID
 
 	if oid, err = ConvertId(id); err != nil {
@@ -191,12 +218,13 @@ func (m *Mongo) FindUnDeleteByID(id interface{}, result interface{}, opts ...*op
 }
 
 // FindOneUndeleteByFilter 查找一条未删除的数据
-func (m *Mongo) FindOneUndeleteByFilter(filter interface{}, result interface{}, opts ...*options.FindOneOptions) (err error) {
+func (m *Mongo) FindOneUndeleteByFilter(filter, result interface{}, opts ...*options.FindOneOptions) (err error) {
 	return m.FindOne(CombAndFilters(ParseFilter(filter), UndeleteFilter()), result, opts...)
+
 }
 
 // FindUndeleteByFilter 查找未删除的所有数据
-func (m *Mongo) FindUndeleteByFilter(filter interface{}, results interface{}, opts ...*options.FindOptions) (err error) {
+func (m *Mongo) FindUndeleteByFilter(filter, results interface{}, opts ...*options.FindOptions) (err error) {
 	return m.Find(CombAndFilters(ParseFilter(filter), UndeleteFilter()), results, opts...)
 }
 
@@ -204,7 +232,7 @@ func (m *Mongo) FindUndeleteByFilter(filter interface{}, results interface{}, op
 // filter 支持 bson 以及 IDocument
 // 如果filter 是一个 Document 那么他必须是 addressable 的, 也就是说是一个指针.
 // result 则是一个 存储结果的指针 例如 &[]SomeDoc or make([]SomeDoc,0)
-func (m *Mongo) Find(filter interface{}, results interface{}, opts ...*options.FindOptions) (err error) {
+func (m *Mongo) Find(filter, results interface{}, opts ...*options.FindOptions) (err error) {
 	var (
 		cursor *mongo.Cursor
 		name   string
@@ -227,4 +255,13 @@ func (m *Mongo) Find(filter interface{}, results interface{}, opts ...*options.F
 	}()
 
 	return cursor.All(context.TODO(), results)
+}
+
+func (m *Mongo) CountDocuments(filter IDocument, opts ...*options.CountOptions) (count int64, err error) {
+	var name string
+
+	if name, err = getCollNameForFind(filter); err != nil {
+		return
+	}
+	return m.db.Collection(name).CountDocuments(context.TODO(), ParseFilter(filter), opts...)
 }

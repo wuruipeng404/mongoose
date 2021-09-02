@@ -285,7 +285,7 @@ func getCollNameForFind(findRes interface{}) (string, error) {
 	}
 }
 
-func getCollName(filter, opt interface{}) (string, error) {
+func getCollNameForOpt(filter, opt interface{}) (string, error) {
 	var (
 		ok  bool
 		doc IDocument

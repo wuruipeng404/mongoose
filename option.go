@@ -15,4 +15,9 @@ type (
 		CollectionName string
 		DriverOptions  []*options.DeleteOptions
 	}
+
+	FindOneDeleteOption struct {
+		CollectionName string
+		DriverOptions  []*options.FindOneAndDeleteOptions
+	}
 )
