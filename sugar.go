@@ -87,7 +87,7 @@ func ConvertFilter(v interface{}, fatherTag string) bson.M {
 		currentValue = reflect.NewAt(tmp.Type(), unsafe.Pointer(tmp.UnsafeAddr())).Elem()
 
 		switch currentValue.Kind() {
-		case reflect.Interface, reflect.Func, reflect.Chan, reflect.Array, reflect.Invalid, reflect.UnsafePointer:
+		case reflect.Interface, reflect.Func, reflect.Chan, reflect.Invalid, reflect.UnsafePointer:
 			continue
 		case reflect.Map:
 			// todo: support
