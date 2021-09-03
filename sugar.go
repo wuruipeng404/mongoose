@@ -86,11 +86,11 @@ func ConvertFilter(v interface{}, fatherTag string) bson.M {
 		tmp := iterRv.Field(i)
 		currentValue = reflect.NewAt(tmp.Type(), unsafe.Pointer(tmp.UnsafeAddr())).Elem()
 
-		switch currentValue.Kind() {
+		kind := currentValue.Kind()
+		rValue := currentValue.Interface()
+
+		switch kind {
 		case reflect.Interface, reflect.Func, reflect.Chan, reflect.Invalid, reflect.UnsafePointer:
-			continue
-		case reflect.Map:
-			// todo: support
 			continue
 
 		default:
@@ -122,8 +122,8 @@ func ConvertFilter(v interface{}, fatherTag string) bson.M {
 			}
 
 			// 有子结构的继续进行 字段遍历
-			if (currentValue.Kind() == reflect.Ptr || currentValue.Kind() == reflect.Struct) &&
-				(currentValue.Type().String() != "time.Time" && currentValue.Type().String() != "*time.Time") {
+			if ((kind == reflect.Ptr && getElemType(rValue).Kind() == reflect.Struct) || kind == reflect.Struct) &&
+				getElemType(rValue).String() != "time.Time" {
 				// 递归处理
 				for nk, nv := range ConvertFilter(currentValue.Interface(), nextFatherTag) {
 					result[nk] = nv
@@ -134,20 +134,20 @@ func ConvertFilter(v interface{}, fatherTag string) bson.M {
 				for sk, sv := range ConvertSliceFilter(currentValue, currentBsonTag) {
 					result[sk] = sv
 				}
+			} else if kind == reflect.Map {
+
+				for iter := currentValue.MapRange(); iter.Next(); {
+					k := iter.Key().Interface().(string)
+					vl := iter.Value().Interface()
+					result[nextFatherTag+"."+k] = vl
+				}
 
 			} else {
 				if currentValue.IsZero() && ignoreZero {
 					continue
 				}
 
-				var key string
-
-				if fatherTag == "" {
-					key = currentBsonTag
-				} else {
-					key = fatherTag + "." + currentBsonTag
-				}
-				result[key] = currentValue.Interface()
+				result[nextFatherTag] = currentValue.Interface()
 			}
 		}
 
