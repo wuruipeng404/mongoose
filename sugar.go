@@ -83,63 +83,139 @@ func ConvertFilter(v interface{}, fatherTag string) bson.M {
 			currentField = rt.Field(i)
 		}
 
-		// no support interface field
-		if currentField.Type.Kind() == reflect.Interface {
-			continue
-		}
-
 		tmp := iterRv.Field(i)
 		currentValue = reflect.NewAt(tmp.Type(), unsafe.Pointer(tmp.UnsafeAddr())).Elem()
-		bsonTag = currentField.Tag.Get("bson")
 
-		// 获取 下一级处理的tag名称
-		if bsonTag == "" {
-			currentBsonTag = currentField.Name
-		} else if bsonTag == "-" {
+		switch currentValue.Kind() {
+		case reflect.Interface, reflect.Func, reflect.Chan, reflect.Array, reflect.Invalid, reflect.UnsafePointer:
 			continue
-		} else if strings.Contains(bsonTag, "inline") {
-			currentBsonTag = ""
-		} else {
-			if strings.Contains(bsonTag, ",") {
-				currentBsonTag = strings.Split(bsonTag, ",")[0]
+		case reflect.Map:
+			// todo: support
+			continue
+
+		default:
+			bsonTag = currentField.Tag.Get("bson")
+
+			// 获取 下一级处理的tag名称
+			if bsonTag == "" {
+				currentBsonTag = currentField.Name
+			} else if bsonTag == "-" {
+				continue
+			} else if strings.Contains(bsonTag, "inline") {
+				currentBsonTag = ""
 			} else {
-				currentBsonTag = bsonTag
+				if strings.Contains(bsonTag, ",") {
+					currentBsonTag = strings.Split(bsonTag, ",")[0]
+				} else {
+					currentBsonTag = bsonTag
+				}
+			}
+
+			if fatherTag == "" {
+				nextFatherTag = currentBsonTag
+			} else {
+				nextFatherTag = fatherTag + "." + currentBsonTag
+			}
+
+			if !strings.Contains(bsonTag, "omitempty") {
+				ignoreZero = false
+			}
+
+			// 有子结构的继续进行 字段遍历
+			if (currentValue.Kind() == reflect.Ptr || currentValue.Kind() == reflect.Struct) &&
+				(currentValue.Type().String() != "time.Time" && currentValue.Type().String() != "*time.Time") {
+				// 递归处理
+				for nk, nv := range ConvertFilter(currentValue.Interface(), nextFatherTag) {
+					result[nk] = nv
+				}
+				// 没有子结构的则进行取值
+			} else if currentValue.Kind() == reflect.Slice {
+
+				for sk, sv := range ConvertSliceFilter(currentValue, currentBsonTag) {
+					result[sk] = sv
+				}
+
+			} else {
+				if currentValue.IsZero() && ignoreZero {
+					continue
+				}
+
+				var key string
+
+				if fatherTag == "" {
+					key = currentBsonTag
+				} else {
+					key = fatherTag + "." + currentBsonTag
+				}
+				result[key] = currentValue.Interface()
 			}
 		}
 
-		if fatherTag == "" {
-			nextFatherTag = currentBsonTag
-		} else {
-			nextFatherTag = fatherTag + "." + currentBsonTag
-		}
+	}
+	return result
+}
 
-		if !strings.Contains(bsonTag, "omitempty") {
-			ignoreZero = false
-		}
+func ConvertSliceFilter(value reflect.Value, tag string) bson.M {
+	var (
+		result    = bson.M{}
+		in        []interface{}
+		subResult []bson.M
+	)
 
-		// 有子结构的继续进行 字段遍历
-		if (currentValue.Kind() == reflect.Ptr || currentValue.Kind() == reflect.Struct) &&
-			(currentValue.Type().String() != "time.Time" && currentValue.Type().String() != "*time.Time") {
-			// 递归处理
-			for nk, nv := range ConvertFilter(currentValue.Interface(), nextFatherTag) {
-				result[nk] = nv
-			}
-			// 没有子结构的则进行取值
-		} else {
-			if currentValue.IsZero() && ignoreZero {
+	if value.Len() == 0 {
+		return result
+	}
+
+label:
+	for i := 0; i < value.Len(); i++ {
+		erv := value.Index(i)
+		// ert := erv.Type()
+
+		// 判断slice的元素类型
+		switch erv.Kind() {
+		// 结构体需要继续处理
+		case reflect.Struct, reflect.Ptr:
+			if erv.Type().String() == "time.Time" || erv.Type().String() == "*time.Time" {
+				in = append(in, erv.Interface())
 				continue
 			}
 
-			var key string
-
-			if fatherTag == "" {
-				key = currentBsonTag
-			} else {
-				key = fatherTag + "." + currentBsonTag
+			if r := ConvertFilter(erv.Interface(), ""); len(r) != 0 {
+				subResult = append(subResult, r)
 			}
-			result[key] = currentValue.Interface()
+
+		// 因为所有元素类型都应该是一样的 这里有一个 是如下类型 直接 break 掉
+		case reflect.Interface, reflect.Func, reflect.Chan, reflect.Array, reflect.Invalid, reflect.UnsafePointer:
+			break label
+
+		case reflect.Map:
+			// todo: support
+			break label
+		// 基础数据类型
+		default:
+			in = append(in, erv.Interface())
 		}
 	}
+
+	if len(in) > 0 {
+		return In(tag, in)
+	}
+
+	if len(subResult) > 0 {
+
+		ba := bson.A{}
+		for _, sub := range subResult {
+
+			tmpBm := bson.M{}
+			for k, v := range sub {
+				tmpBm[tag+"."+k] = v
+			}
+			ba = append(ba, tmpBm)
+		}
+
+		result["$or"] = ba
+	}
+
 	return result
 }
 
