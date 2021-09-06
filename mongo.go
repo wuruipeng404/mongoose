@@ -103,32 +103,15 @@ func (m *Mongo) InsertMany(docs []IDocument, opts ...*options.InsertManyOptions)
 }
 
 // DeleteOne 删除一条数据
-// 如果 filter 是IDocument 类型 那么会自动找到 collection
-// 否则需要 指明 opt.CollectionName 参数
-func (m *Mongo) DeleteOne(filter interface{}, opt *DeleteOption) (*mongo.DeleteResult, error) {
-	var (
-		err  error
-		name string
-	)
-
-	if name, err = getCollNameForOpt(filter, opt); err != nil {
-		return nil, err
-	}
-
-	return m.db.Collection(name).DeleteOne(context.TODO(), ParseFilter(filter), opt.DriverOptions...)
+// 如果你希望使用bson当作filter,那么建议使用driver的原始方法
+func (m *Mongo) DeleteOne(filter IDocument, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
+	return m.db.Collection(filter.CollectionName()).DeleteOne(context.TODO(), ParseFilter(filter), opts...)
 }
 
 // DeleteMany 删除多条数据
-func (m *Mongo) DeleteMany(filter interface{}, opt *DeleteOption) (*mongo.DeleteResult, error) {
-	var (
-		err  error
-		name string
-	)
-	if name, err = getCollNameForOpt(filter, opt); err != nil {
-		return nil, err
-	}
-
-	return m.db.Collection(name).DeleteMany(context.TODO(), ParseFilter(filter), opt.DriverOptions...)
+// 如果你希望使用bson当作filter,那么建议使用driver的原始方法
+func (m *Mongo) DeleteMany(filter IDocument, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
+	return m.db.Collection(filter.CollectionName()).DeleteMany(context.TODO(), ParseFilter(filter), opts...)
 }
 
 // UpdateByID 通过ID更新 支持 string 或 objectId
@@ -174,17 +157,9 @@ func (m *Mongo) FindOneAndReplace(filter interface{}, replacement IDocument,
 	return m.db.Collection(replacement.CollectionName()).FindOneAndReplace(context.TODO(), filter, replacement, opts...)
 }
 
-func (m *Mongo) FindOneAndDelete(filter interface{}, opt *FindOneDeleteOption) (result *mongo.SingleResult, err error) {
-	var (
-		name string
-	)
-
-	if name, err = getCollNameForOpt(filter, opt); err != nil {
-		return nil, err
-	}
-
-	result = m.db.Collection(name).FindOneAndDelete(context.TODO(), ParseFilter(filter), opt.DriverOptions...)
-	return
+// FindOneAndDelete 如果你希望使用bson当作filter,那么建议使用driver的原始方法
+func (m *Mongo) FindOneAndDelete(filter IDocument, opts ...*options.FindOneAndDeleteOptions) *mongo.SingleResult {
+	return m.db.Collection(filter.CollectionName()).FindOneAndDelete(context.TODO(), ParseFilter(filter), opts...)
 }
 
 func (m *Mongo) FindOneAndUpdate(filter interface{}, update IDocument,

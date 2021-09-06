@@ -314,30 +314,6 @@ func Set(doc interface{}) bson.M {
 	return bson.M{"$set": doc}
 }
 
-// get collection by struct
-// func (m *Mongo) coll(sc interface{}) *mongo.Collection {
-// 	var (
-// 		name string
-// 		rt   = reflect.TypeOf(sc)
-// 		rv   = reflect.ValueOf(sc)
-// 	)
-//
-// 	collM := rv.MethodByName("CollectionName")
-//
-// 	if collM.IsValid() {
-// 		name = collM.Call([]reflect.Value{})[0].Interface().(string)
-// 	} else {
-// 		if rt.Kind() == reflect.Ptr {
-// 			name = rt.Elem().Name()
-// 		} else {
-// 			name = rt.Name()
-// 		}
-// 	}
-//
-// 	name = toSnakeCase(name)
-// 	return m.db.Collection(name)
-// }
-
 func getElemType(a interface{}) reflect.Type {
 	for t := reflect.TypeOf(a); ; {
 		switch t.Kind() {
@@ -361,25 +337,49 @@ func getCollNameForFind(findRes interface{}) (string, error) {
 	}
 }
 
-func getCollNameForOpt(filter, opt interface{}) (string, error) {
-	var (
-		ok  bool
-		doc IDocument
-	)
+// func getCollNameForOpt(filter, opt interface{}) (string, error) {
+// 	var (
+// 		ok  bool
+// 		doc IDocument
+// 	)
+//
+// 	if doc, ok = filter.(IDocument); ok {
+// 		return doc.CollectionName(), nil
+// 	}
+//
+// 	ref := reflect.ValueOf(opt)
+//
+// 	if !ref.IsValid() {
+// 		return "", CollectionNameNotFound
+// 	}
+//
+// 	if fn := ref.Elem().FieldByName("CollectionName"); fn.IsZero() {
+// 		return "", CollectionNameNotFound
+// 	} else {
+// 		return fn.String(), nil
+// 	}
+// }
 
-	if doc, ok = filter.(IDocument); ok {
-		return doc.CollectionName(), nil
-	}
-
-	ref := reflect.ValueOf(opt)
-
-	if !ref.IsValid() {
-		return "", CollectionNameNotFound
-	}
-
-	if fn := ref.Elem().FieldByName("CollectionName"); fn.IsZero() {
-		return "", CollectionNameNotFound
-	} else {
-		return fn.String(), nil
-	}
-}
+// get collection by struct
+// func (m *Mongo) coll(sc interface{}) *mongo.Collection {
+// 	var (
+// 		name string
+// 		rt   = reflect.TypeOf(sc)
+// 		rv   = reflect.ValueOf(sc)
+// 	)
+//
+// 	collM := rv.MethodByName("CollectionName")
+//
+// 	if collM.IsValid() {
+// 		name = collM.Call([]reflect.Value{})[0].Interface().(string)
+// 	} else {
+// 		if rt.Kind() == reflect.Ptr {
+// 			name = rt.Elem().Name()
+// 		} else {
+// 			name = rt.Name()
+// 		}
+// 	}
+//
+// 	name = toSnakeCase(name)
+// 	return m.db.Collection(name)
+// }
