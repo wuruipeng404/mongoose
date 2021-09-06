@@ -39,7 +39,7 @@ func Open(opt *Options) (*Mongo, error) {
 		err      error
 		dsn      string
 		client   *mongo.Client
-		connOpts []*options.ClientOptions
+		connOpts = make([]*options.ClientOptions, 0)
 	)
 
 	if opt.User == "" || opt.Password == "" {
@@ -78,6 +78,14 @@ func Open(opt *Options) (*Mongo, error) {
 
 func (m *Mongo) Release(ctx context.Context) error {
 	return m.client.Disconnect(ctx)
+}
+
+func (m *Mongo) Client() *mongo.Client {
+	return m.client
+}
+
+func (m *Mongo) DB() *mongo.Database {
+	return m.db
 }
 
 // DriverCollection 提供原始查询方法
