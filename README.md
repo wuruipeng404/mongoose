@@ -81,24 +81,10 @@ func HaveFilterMethod() {
 	odm.Find(mongoose.Eq("field_a", "zhangsan"), &result2)
 }
 
-// Special the delete method have a little bit different
-func Special() {
-
-	// when your filter is bson, not a IDocument
-	// you need add option CollectionName
-
-	option := mongoose.DeleteOption{
-		CollectionName: "your collection",
-		DriverOptions:  nil, // driver delete options []
-	}
-	odm.Delete(mongoose.Eq("field_a", "aaa"), option)
-}
 
 // release client
-
 func Close() {
 	odm.Release(context.TODO())
 }
-
 
 ```
