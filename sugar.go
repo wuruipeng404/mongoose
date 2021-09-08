@@ -31,16 +31,17 @@ import (
 // 如果本身就是 bson.M 或 bson.D 系列则不进行转化
 // 如果是结构体或者结构体指针则进行转化 (支持复杂结构体)
 func ParseFilter(filter interface{}) interface{} {
-	var (
-		finallyF bson.M
-		refType  = reflect.TypeOf(filter).String()
-	)
+
+	refType := reflect.TypeOf(filter).String()
 
 	if refType == "primitive.M" || refType == "primitive.D" {
 		return filter
+	} else if refType == "struct" || refType == "*struct" {
+		return ConvertFilter(filter, "")
+	} else {
+		panic("the filter is not a valid value, is must be a bson.M or bson.D or IDocument")
 	}
-	finallyF = ConvertFilter(filter, "")
-	return finallyF
+
 }
 
 // ConvertFilter convert Struct or Ptr to bson.M
