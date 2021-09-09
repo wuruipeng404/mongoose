@@ -7,6 +7,8 @@
 package mongoose
 
 import (
+	"fmt"
+	"log"
 	"reflect"
 	"strings"
 	"unsafe"
@@ -37,8 +39,10 @@ func ParseFilter(filter interface{}) interface{} {
 	if refType == "primitive.M" || refType == "primitive.D" {
 		return filter
 	}
-	return ConvertFilter(filter, "")
 
+	result := ConvertFilter(filter, "")
+	log.Println(fmt.Sprintf("[Mongoose]  Parse Filter Result:%+v", result))
+	return result
 }
 
 // ConvertFilter convert Struct or Ptr to bson.M
