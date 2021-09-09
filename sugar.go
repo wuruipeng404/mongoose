@@ -36,11 +36,8 @@ func ParseFilter(filter interface{}) interface{} {
 
 	if refType == "primitive.M" || refType == "primitive.D" {
 		return filter
-	} else if refType == "struct" || refType == "*struct" {
-		return ConvertFilter(filter, "")
-	} else {
-		panic("the filter is not a valid value, is must be a bson.M or bson.D or IDocument")
 	}
+	return ConvertFilter(filter, "")
 
 }
 
