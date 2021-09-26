@@ -8,6 +8,7 @@ package mongoose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -100,14 +101,25 @@ func (m *Mongo) InsertOne(doc IDocument, opts ...*options.InsertOneOptions) (*mo
 }
 
 // InsertMany 插入多条数据
-func (m *Mongo) InsertMany(docs []IDocument, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error) {
-	var data []interface{}
+func (m *Mongo) InsertMany(docs []interface{}, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error) {
+	if len(docs) == 0 {
+		return nil, errors.New("not doc was found")
+	}
+	var collectionName string
 
 	for _, doc := range docs {
-		doc.PreCreate()
-		data = append(data, doc)
+		d, ok := doc.(IDocument)
+		if !ok {
+			return nil, errors.New("illegal doc")
+		}
+
+		if collectionName == "" {
+			collectionName = d.CollectionName()
+		}
+
+		d.PreCreate()
 	}
-	return m.db.Collection(docs[0].CollectionName()).InsertMany(context.TODO(), data, opts...)
+	return m.db.Collection(collectionName).InsertMany(context.TODO(), docs, opts...)
 }
 
 // DeleteOne 删除一条数据
