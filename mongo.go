@@ -101,7 +101,7 @@ func (m *Mongo) InsertOne(doc IDocument, opts ...*options.InsertOneOptions) (*mo
 
 // InsertMany 插入多条数据
 func (m *Mongo) InsertMany(docs []IDocument, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error) {
-	var data []interface{}
+	var data []any
 
 	for _, doc := range docs {
 		doc.PreCreate()
@@ -123,7 +123,7 @@ func (m *Mongo) DeleteMany(filter IDocument, opts ...*options.DeleteOptions) (*m
 }
 
 // UpdateByID 通过ID更新 支持 string 或 objectId
-func (m *Mongo) UpdateByID(id interface{}, update IDocument, opts ...*options.UpdateOptions) (*mongo.UpdateResult,
+func (m *Mongo) UpdateByID(id any, update IDocument, opts ...*options.UpdateOptions) (*mongo.UpdateResult,
 	error) {
 	var (
 		err error
@@ -137,13 +137,13 @@ func (m *Mongo) UpdateByID(id interface{}, update IDocument, opts ...*options.Up
 }
 
 // UpdateOne 更新一条数据
-func (m *Mongo) UpdateOne(filter interface{}, update IDocument, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+func (m *Mongo) UpdateOne(filter any, update IDocument, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 	update.PreUpdate()
 	return m.db.Collection(update.CollectionName()).UpdateOne(context.TODO(), ParseFilter(filter), Set(update), opts...)
 }
 
 // UpdateMany 更新多条数据
-func (m *Mongo) UpdateMany(filter interface{}, update IDocument, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+func (m *Mongo) UpdateMany(filter any, update IDocument, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 	update.PreUpdate()
 	return m.db.Collection(update.CollectionName()).UpdateMany(context.TODO(), ParseFilter(filter), Set(update), opts...)
 }
@@ -151,7 +151,7 @@ func (m *Mongo) UpdateMany(filter interface{}, update IDocument, opts ...*option
 // FindOne 查找一条数据
 // filter 支持 bson 以及 IDocument
 // result 则是一个 存储结果的指针 例如 &SomeDoc
-func (m *Mongo) FindOne(filter, result interface{}, opts ...*options.FindOneOptions) (err error) {
+func (m *Mongo) FindOne(filter, result any, opts ...*options.FindOneOptions) (err error) {
 	var name string
 
 	if name, err = getCollNameForFind(result); err != nil {
@@ -160,7 +160,7 @@ func (m *Mongo) FindOne(filter, result interface{}, opts ...*options.FindOneOpti
 	return m.db.Collection(name).FindOne(context.TODO(), ParseFilter(filter), opts...).Decode(result)
 }
 
-func (m *Mongo) FindOneAndReplace(filter interface{}, replacement IDocument,
+func (m *Mongo) FindOneAndReplace(filter any, replacement IDocument,
 	opts ...*options.FindOneAndReplaceOptions) *mongo.SingleResult {
 	return m.db.Collection(replacement.CollectionName()).FindOneAndReplace(context.TODO(), filter, replacement, opts...)
 }
@@ -170,7 +170,7 @@ func (m *Mongo) FindOneAndDelete(filter IDocument, opts ...*options.FindOneAndDe
 	return m.db.Collection(filter.CollectionName()).FindOneAndDelete(context.TODO(), ParseFilter(filter), opts...)
 }
 
-func (m *Mongo) FindOneAndUpdate(filter interface{}, update IDocument,
+func (m *Mongo) FindOneAndUpdate(filter any, update IDocument,
 	opts ...*options.FindOneAndUpdateOptions) *mongo.SingleResult {
 	return m.db.Collection(update.CollectionName()).FindOneAndUpdate(
 		context.TODO(),
@@ -180,7 +180,7 @@ func (m *Mongo) FindOneAndUpdate(filter interface{}, update IDocument,
 }
 
 // FindByID 通过id查找数据
-func (m *Mongo) FindByID(id, result interface{}, opts ...*options.FindOneOptions) (err error) {
+func (m *Mongo) FindByID(id, result any, opts ...*options.FindOneOptions) (err error) {
 	var oid primitive.ObjectID
 
 	if oid, err = ConvertId(id); err != nil {
@@ -191,7 +191,7 @@ func (m *Mongo) FindByID(id, result interface{}, opts ...*options.FindOneOptions
 }
 
 // FindUnDeleteByID 查找一条未删除的数据
-func (m *Mongo) FindUnDeleteByID(id, result interface{}, opts ...*options.FindOneOptions) (err error) {
+func (m *Mongo) FindUnDeleteByID(id, result any, opts ...*options.FindOneOptions) (err error) {
 	var oid primitive.ObjectID
 
 	if oid, err = ConvertId(id); err != nil {
@@ -201,13 +201,13 @@ func (m *Mongo) FindUnDeleteByID(id, result interface{}, opts ...*options.FindOn
 }
 
 // FindOneUndeleteByFilter 查找一条未删除的数据
-func (m *Mongo) FindOneUndeleteByFilter(filter, result interface{}, opts ...*options.FindOneOptions) (err error) {
+func (m *Mongo) FindOneUndeleteByFilter(filter, result any, opts ...*options.FindOneOptions) (err error) {
 	return m.FindOne(CombAndFilters(ParseFilter(filter), UndeleteFilter()), result, opts...)
 
 }
 
 // FindUndeleteByFilter 查找未删除的所有数据
-func (m *Mongo) FindUndeleteByFilter(filter, results interface{}, opts ...*options.FindOptions) (err error) {
+func (m *Mongo) FindUndeleteByFilter(filter, results any, opts ...*options.FindOptions) (err error) {
 	return m.Find(CombAndFilters(ParseFilter(filter), UndeleteFilter()), results, opts...)
 }
 
@@ -215,7 +215,7 @@ func (m *Mongo) FindUndeleteByFilter(filter, results interface{}, opts ...*optio
 // filter 支持 bson 以及 IDocument
 // 如果filter 是一个 Document 那么他必须是 addressable 的, 也就是说是一个指针.
 // result 则是一个 存储结果的指针 例如 &[]SomeDoc or make([]SomeDoc,0)
-func (m *Mongo) Find(filter, results interface{}, opts ...*options.FindOptions) (err error) {
+func (m *Mongo) Find(filter, results any, opts ...*options.FindOptions) (err error) {
 	var (
 		cursor *mongo.Cursor
 		name   string

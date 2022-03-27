@@ -32,7 +32,7 @@ import (
 // ParseFilter 检查filter并进行转化. 转化为 driver 支持的格式
 // 如果本身就是 bson.M 或 bson.D 系列则不进行转化
 // 如果是结构体或者结构体指针则进行转化 (支持复杂结构体)
-func ParseFilter(filter interface{}) interface{} {
+func ParseFilter(filter any) any {
 
 	refType := reflect.TypeOf(filter).String()
 
@@ -46,7 +46,7 @@ func ParseFilter(filter interface{}) interface{} {
 }
 
 // ConvertFilter convert Struct or Ptr to bson.M
-func ConvertFilter(v interface{}, fatherTag string) bson.M {
+func ConvertFilter(v any, fatherTag string) bson.M {
 	var (
 		result   = bson.M{}
 		rv       = reflect.ValueOf(v)
@@ -160,7 +160,7 @@ func ConvertFilter(v interface{}, fatherTag string) bson.M {
 func ConvertSliceFilter(value reflect.Value, tag string) bson.M {
 	var (
 		result    = bson.M{}
-		in        []interface{}
+		in        []any
 		subResult []bson.M
 	)
 
@@ -222,7 +222,7 @@ label:
 }
 
 // SimpleStructToDoc 没有嵌套的结构体可以使用此方法进行转化
-func SimpleStructToDoc(v interface{}) (doc *bsoncore.Document, err error) {
+func SimpleStructToDoc(v any) (doc *bsoncore.Document, err error) {
 	var data []byte
 
 	if data, err = bson.Marshal(v); err != nil {
@@ -233,7 +233,7 @@ func SimpleStructToDoc(v interface{}) (doc *bsoncore.Document, err error) {
 	return
 }
 
-func ConvertId(id interface{}) (oid primitive.ObjectID, err error) {
+func ConvertId(id any) (oid primitive.ObjectID, err error) {
 	if reflect.TypeOf(id) != reflect.TypeOf(primitive.NilObjectID) {
 		if oid, err = primitive.ObjectIDFromHex(id.(string)); err != nil {
 			return
@@ -244,17 +244,17 @@ func ConvertId(id interface{}) (oid primitive.ObjectID, err error) {
 	return
 }
 
-func CombAndFilters(filters ...interface{}) bson.M {
+func CombAndFilters(filters ...any) bson.M {
 	return CombineFilters("$and", filters...)
 }
 
-func CombOrFilters(filters ...interface{}) bson.M {
+func CombOrFilters(filters ...any) bson.M {
 	return CombineFilters("$or", filters...)
 }
 
 // CombineFilters 用来组合多个bson.M filter
 // operator :  $and  $or ...
-func CombineFilters(operator string, filters ...interface{}) bson.M {
+func CombineFilters(operator string, filters ...any) bson.M {
 	var cb bson.A
 
 	if len(filters) == 0 {
@@ -280,43 +280,43 @@ func UnDeletedFilterByID(id primitive.ObjectID) bson.M {
 	return CombAndFilters(UndeleteFilter(), IdFilter(id))
 }
 
-func Eq(field string, value interface{}) bson.M {
+func Eq(field string, value any) bson.M {
 	return bson.M{field: bson.M{"$eq": value}}
 }
 
-func Ne(field string, value interface{}) bson.M {
+func Ne(field string, value any) bson.M {
 	return bson.M{field: bson.M{"$ne": value}}
 }
 
-func Gt(field string, value interface{}) bson.M {
+func Gt(field string, value any) bson.M {
 	return bson.M{field: bson.M{"$gt": value}}
 }
 
-func Gte(field string, value interface{}) bson.M {
+func Gte(field string, value any) bson.M {
 	return bson.M{field: bson.M{"$gte": value}}
 }
 
-func In(field string, value interface{}) bson.M {
+func In(field string, value any) bson.M {
 	return bson.M{field: bson.M{"$in": value}}
 }
 
-func Lt(field string, value interface{}) bson.M {
+func Lt(field string, value any) bson.M {
 	return bson.M{field: bson.M{"$lt": value}}
 }
 
-func Lte(field string, value interface{}) bson.M {
+func Lte(field string, value any) bson.M {
 	return bson.M{field: bson.M{"$lte": value}}
 }
 
-func Nin(field string, value interface{}) bson.M {
+func Nin(field string, value any) bson.M {
 	return bson.M{field: bson.M{"$nin": value}}
 }
 
-func Set(doc interface{}) bson.M {
+func Set(doc any) bson.M {
 	return bson.M{"$set": doc}
 }
 
-func getElemType(a interface{}) reflect.Type {
+func getElemType(a any) reflect.Type {
 	for t := reflect.TypeOf(a); ; {
 		switch t.Kind() {
 		case reflect.Ptr, reflect.Slice:
@@ -327,7 +327,7 @@ func getElemType(a interface{}) reflect.Type {
 	}
 }
 
-func getCollNameForFind(findRes interface{}) (string, error) {
+func getCollNameForFind(findRes any) (string, error) {
 	if n := reflect.New(getElemType(findRes)).MethodByName("CollectionName"); n.IsValid() {
 		name := n.Call(nil)[0].Interface().(string)
 		if name == "" {
@@ -339,7 +339,7 @@ func getCollNameForFind(findRes interface{}) (string, error) {
 	}
 }
 
-// func getCollNameForOpt(filter, opt interface{}) (string, error) {
+// func getCollNameForOpt(filter, opt any) (string, error) {
 // 	var (
 // 		ok  bool
 // 		doc IDocument
@@ -363,7 +363,7 @@ func getCollNameForFind(findRes interface{}) (string, error) {
 // }
 
 // get collection by struct
-// func (m *Mongo) coll(sc interface{}) *mongo.Collection {
+// func (m *Mongo) coll(sc any) *mongo.Collection {
 // 	var (
 // 		name string
 // 		rt   = reflect.TypeOf(sc)
